@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>PAPER TRADING · Crypto Dashboard</title>
+<style>
+:root{--bg:#0b0e14;--panel:#131822;--panel2:#171d29;--line:#222b3a;--txt:#e6eaf2;--mute:#8793a8;--green:#2ecc8f;--red:#ff5c6c;--amber:#ffb020;--blue:#5aa9ff;--violet:#9d8cff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:1280px;margin:0 auto;padding:12px 14px 40px}
+header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:6px 0 12px}
+h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,176,32,.12);color:var(--amber);border:1.5px solid var(--amber);border-radius:8px;padding:5px 12px;font-weight:800;letter-spacing:1.4px;font-size:13px;text-transform:uppercase}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:p 2s infinite}
+@keyframes p{50%{opacity:.25}}
+.banner{background:repeating-linear-gradient(135deg,#2a2208,#2a2208 14px,#221b06 14px,#221b06 28px);color:var(--amber);text-align:center;font-size:12px;padding:5px 8px;font-weight:600;letter-spacing:.5px;border-bottom:1px solid #4a3a0c}
+.meta{color:var(--mute);font-size:12px;display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px}
+.dot.bad{background:var(--red)} .dot.warn{background:var(--amber)}
+.grid{display:grid;gap:10px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;min-width:0}
+.card .l{color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.7px}
+.card .v{font-size:21px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .s{color:var(--mute);font-size:12px;margin-top:1px;font-variant-numeric:tabular-nums}
+.pos{color:var(--green)} .neg{color:var(--red)} .mut{color:var(--mute)}
+section{margin-top:18px}
+section>h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--mute);margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+section>h2 .cnt{color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 8px;font-size:12px;margin-left:6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+#chart{width:100%;height:260px;position:relative}
+#chart svg{display:block;width:100%;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin:2px 4px 6px}
+.legend b{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.tip{position:absolute;pointer-events:none;background:#0d1219;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12px;white-space:nowrap;display:none;z-index:3}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.6px;background:var(--panel2);position:sticky;top:0;cursor:pointer;user-select:none}
+th.nosort{cursor:default}
+th:first-child,td:first-child,td.left,th.left{text-align:left}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(255,255,255,.025)}
+th .ar{font-size:9px;margin-left:3px;color:var(--blue)}
+td.reason{white-space:normal;min-width:240px;max-width:420px;text-align:left;color:var(--mute);font-size:12px}
+.sym{font-weight:700}
+.chip{display:inline-block;border-radius:6px;padding:1px 8px;font-size:11px;font-weight:700;letter-spacing:.4px;border:1px solid}
+.chip.ready{color:var(--green);border-color:var(--green);background:rgba(46,204,143,.1)}
+.chip.blocked{color:var(--red);border-color:var(--red);background:rgba(255,92,108,.08)}
+.chip.below_threshold{color:var(--amber);border-color:var(--amber);background:rgba(255,176,32,.08)}
+.chip.type{color:var(--blue);border-color:#2b4a70;background:rgba(90,169,255,.08);font-weight:600}
+.empty{padding:18px;text-align:center;color:var(--mute)}
+.btn{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:600;text-transform:none;letter-spacing:0}
+.btn:hover{border-color:var(--blue)} .btn[disabled]{opacity:.5;cursor:wait}
+.note{color:var(--mute);font-size:12px;margin:6px 2px 0}
+.watch{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.watch span{font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 9px;color:var(--mute)}
+.watch b{color:var(--txt)}
+footer{margin-top:26px;color:var(--mute);font-size:12px;text-align:center}
+/* phone: tables turn into cards */
+@media (max-width:760px){
+  .wrap{padding:8px 10px 30px} h1{font-size:16px} .card .v{font-size:18px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  #chart{height:210px}
+  .stack .tablewrap{border:0;background:none;overflow:visible}
+  .stack table,.stack tbody,.stack tr,.stack td{display:block;width:100%}
+  .stack thead{display:none}
+  .stack tr{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;padding:6px 10px}
+  .stack td{display:flex;justify-content:space-between;gap:12px;text-align:right;border:0;padding:4px 0;white-space:normal}
+  .stack td::before{content:attr(data-l);color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.5px;flex:none;padding-top:1px}
+  .stack td.reason{max-width:none;min-width:0}
+  .stack td:first-child{font-size:15px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:2px}
+  .sortbar{display:flex!important}
+}
+.sortbar{display:none;gap:6px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--mute)}
+.sortbar select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="banner">SIMULATED · PAPER TRADING ONLY — no real money, no exchange account, no real orders</div>
+<div class="wrap">
+<header>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <h1>Crypto Trader Dashboard</h1>
+    <span class="badge"><i></i>Paper Trading</span>
+  </div>
+  <div class="meta">
+    <span id="status"><span class="dot warn"></span>loading…</span>
+    <span id="updated"></span>
+    <span id="countdown"></span>
+    <button class="btn" id="reloadBtn" title="Refresh now">⟳ Refresh</button>
+  </div>
+</header>
+<div id="staticnote" class="note" style="display:none;color:var(--amber);margin:0 0 10px"></div>
+
+<div class="grid kpis" id="kpis"></div>
+
+<section>
+  <h2>Equity curve</h2>
+  <div class="panel">
+    <div class="legend" id="legend"></div>
+    <div id="chart"><div class="tip" id="tip"></div></div>
+    <div class="note" id="chartnote"></div>
+  </div>
+</section>
+
+<section class="stack">
+  <h2><span>Open positions<span class="cnt" id="posCnt">0</span></span></h2>
+  <div class="sortbar" data-t="pos"></div>
+  <div class="tablewrap"><table id="posTbl"></table></div>
+</section>
+
+<section class="stack">
+  <h2><span>Queued trades <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">(scanner candidates not yet placed)</span><span class="cnt" id="qCnt">0</span></span>
+    <span style="display:flex;gap:10px;align-items:center"><span class="mut" id="qMeta" style="text-transform:none;letter-spacing:0;font-size:12px;font-weight:400"></span><button class="btn" id="scanBtn">Run dry-run scan</button></span></h2>
+  <div class="sortbar" data-t="q"></div>
+  <div class="tablewrap"><table id="qTbl"></table></div>
+  <div class="watch" id="watch"></div>
+  <div class="note" id="qNote"></div>
+</section>
+
+<section class="stack">
+  <h2><span>Trades placed — closed journal<span class="cnt" id="trCnt">0</span></span></h2>
+  <div class="sortbar" data-t="tr"></div>
+  <div class="tablewrap"><table id="trTbl"></table></div>
+</section>
+
+<footer><div id="asof" style="margin-bottom:6px"></div>PAPER TRADING · simulated fills incl. 0.10% fee + 0.05% slippage per side · prices: Coinbase Exchange public API · times shown in ET</footer>
+</div>
+
+<script>
+const EMBED = {"mode": "pub", "data": {"generated": "2026-10-16T14:52:39.484287+00:00", "mode": "paper", "price_source": "Coinbase Exchange public API", "price_failed": [], "account": {"start_balance": 10000.0, "cash": 9561.058868717764, "positions_value": 439.4198455142333, "equity": 10000.478714231998, "pnl": 0.4787142319983104, "pnl_pct": 0.0047871423199730145, "realized": 0, "unrealized": 0.47871423199740093, "fees_paid": 0.43850262865358236, "btc_start": 82241.15, "btc_now": 82160.33, "btc_return_pct": -0.09827197212100014, "btc_equiv_equity": 9990.1728027879, "vs_btc_pts": 0.10305911444097315, "n_closed": 0, "win_rate": null, "profit_factor": null, "profit_factor_inf": false, "avg_r": null, "avg_hold_h": null, "max_drawdown_pct": 0.009941393312781486, "open_count": 1, "max_positions": 5, "runs": 2, "created": "2026-10-16T14:42:50.044430+00:00", "reconciles": true}, "positions": [{"symbol": "NEAR", "kind": "swing", "setup": "pullback", "score": 85, "entry_time": "2026-10-16T14:42:50.044430+00:00", "entry_price": 5.2480227, "last": 5.259, "price_stale": false, "qty": 83.55577971367813, "value": 439.4198455142333, "cost": 438.9411312822359, "stop": 4.0625572273457315, "initial_stop": 4.0625572273457315, "target": 8.804419117962805, "trail_active": false, "risk_amount": 100.0, "unreal": 0.47871423199740093, "unreal_pct": 0.1090611469011755, "r": 0.004787142319974009, "to_stop_pct": 29.45048415812628, "to_target_pct": 67.41622205671808, "reason": "close>EMA50>EMA200; EMA20>EMA50; EMA50 rising; EMA200 rising; pullback to EMA20 (4.87) held and closed back up (green bar); RSI 57; 20d return +6.1%", "planned_rr": 2.956158507187217}], "trades": [], "history": [{"ts": "2026-10-16T14:42:50.044430+00:00", "equity": 9999.3424, "btc": 82241.15}, {"ts": "2026-10-16T14:49:20.279496+00:00", "equity": 10001.473, "btc": 82256.39}], "live_point": {"ts": "2026-10-16T14:52:39.484287+00:00", "equity": 10000.478714231998, "btc": 82160.33}, "queue": {"generated": "2026-10-16T14:51:17.569539+00:00", "equity": 10001.314272029134, "open_positions": 1, "max_positions": 5, "cash": 9561.058868717764, "scanned": 20, "items": [], "watch": [{"symbol": "BTC", "kind": "swing", "note": "uptrend but no breakout/pullback trigger"}, {"symbol": "ZEC", "kind": "swing", "note": "uptrend but no breakout/pullback trigger"}, {"symbol": "LTC", "kind": "swing", "note": "uptrend but no breakout/pullback trigger"}, {"symbol": "UNI", "kind": "swing", "note": "uptrend but no breakout/pullback trigger"}, {"symbol": "AVAX", "kind": "swing", "note": "uptrend but no breakout/pullback trigger"}, {"symbol": "TAO", "kind": "swing", "note": "uptrend but no breakout/pullback trigger"}], "source": "dashboard dry-run refresh"}, "rules": {"max_positions": 5, "risk_per_trade_pct": 1.0, "cooldown_hours": 24.0, "swing_min_score": 65, "day_min_score": 70}}};
+const PUB = !!(EMBED && EMBED.mode === "pub");          // published (GitHub Pages) variant: fetches data.json + live Coinbase prices
+const STATIC = !!(EMBED && (EMBED.mode === "static" || PUB));
+const REFRESH_MS = 30000;
+let DATA = STATIC ? EMBED.data : null;
+let nextAt = Date.now() + REFRESH_MS;
+const sortState = {pos:{k:"unreal",d:-1}, q:{k:"score",d:-1}, tr:{k:"exit_time",d:-1}};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cls = x => x == null ? "" : (x > 0 ? "pos" : (x < 0 ? "neg" : ""));
+function money(x, d=2, sign=false){ if(x==null||isNaN(x)) return "—"; const s=Math.abs(x).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}); return (x<0?"-":(sign?"+":""))+"$"+s; }
+function pct(x, d=2, sign=true){ if(x==null||isNaN(x)) return "—"; return (x>0&&sign?"+":"")+x.toFixed(d)+"%"; }
+function px(x){ if(x==null||isNaN(x)) return "—"; const a=Math.abs(x); if(a>=1000) return x.toLocaleString("en-US",{maximumFractionDigits:2,minimumFractionDigits:2}); if(a>=1) return x.toFixed(4); if(a>=0.01) return x.toFixed(5); return x.toPrecision(4); }
+function qty(x){ if(x==null) return "—"; const a=Math.abs(x); return a>=100? x.toLocaleString("en-US",{maximumFractionDigits:1}) : (a>=1? x.toFixed(3): x.toPrecision(4)); }
+const FMT = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",hour12:true});
+function et(s){ if(!s) return "—"; const d=new Date(s); if(isNaN(d)) return "—"; return FMT.format(d).replace(",","")+" ET"; }
+function age(s){ const ms=Date.now()-new Date(s).getTime(); if(isNaN(ms)) return "—"; const m=Math.max(0,Math.floor(ms/60000)); const d=Math.floor(m/1440), h=Math.floor(m%1440/60), mi=m%60; return d? d+"d "+h+"h" : (h? h+"h "+mi+"m" : mi+"m"); }
+function hold(h){ if(h==null) return "—"; if(h<1) return Math.round(h*60)+"m"; if(h<48) return h.toFixed(1)+"h"; return (h/24).toFixed(1)+"d"; }
+const rfmt = r => r==null?"—":(r>0?"+":"")+r.toFixed(2)+"R";
+
+function kpi(l, v, s, c){ return `<div class="card"><div class="l">${esc(l)}</div><div class="v ${c||""}">${v}</div><div class="s">${s||"&nbsp;"}</div></div>`; }
+
+function renderKpis(d){
+  const a = d.account;
+  const pf = a.profit_factor_inf ? "∞" : (a.profit_factor==null ? "n/a" : a.profit_factor.toFixed(2));
+  $("kpis").innerHTML = [
+    kpi("Total equity", money(a.equity), "start "+money(a.start_balance,0)),
+    kpi("Total P&L", money(a.pnl,2,true), pct(a.pnl_pct), cls(a.pnl)),
+    kpi("Cash balance", money(a.cash), (a.equity? (a.cash/a.equity*100).toFixed(1):"0")+"% of equity"),
+    kpi("Positions value", money(a.positions_value), a.open_count+" / "+a.max_positions+" open"),
+    kpi("Realized P&L", money(a.realized,2,true), a.n_closed+" closed trades · fees "+money(a.fees_paid), cls(a.realized)),
+    kpi("Unrealized P&L", money(a.unrealized,2,true), "open positions, net of entry fee", cls(a.unrealized)),
+    kpi("vs Buy & Hold BTC", a.vs_btc_pts==null?"—":(a.vs_btc_pts>0?"+":"")+a.vs_btc_pts.toFixed(2)+" pts",
+        "BTC "+pct(a.btc_return_pct)+" · strategy "+pct(a.pnl_pct), cls(a.vs_btc_pts)),
+    kpi("Win rate", a.win_rate==null?"n/a":a.win_rate.toFixed(1)+"%", a.n_closed? a.n_closed+" trades" : "no closed trades yet"),
+    kpi("Profit factor", pf, a.avg_r==null?"avg R n/a":"avg "+rfmt(a.avg_r)),
+    kpi("Max drawdown", "-"+a.max_drawdown_pct.toFixed(2)+"%", "from equity snapshots", a.max_drawdown_pct>0?"neg":""),
+  ].join("");
+}
+
+/* ---------- chart ---------- */
+function renderChart(d){
+  const host = $("chart");
+  const pts = d.history.map(h=>({t:new Date(h.ts).getTime(), e:h.equity, b:h.btc}));
+  const lp = d.live_point; const lt = new Date(lp.ts).getTime();
+  if (!pts.length || lt - pts[pts.length-1].t > 5000) pts.push({t:lt, e:lp.equity, b:lp.btc, live:true});
+  else pts[pts.length-1].live = true;
+  const sb = d.account.start_balance, b0 = d.account.btc_start;
+  pts.forEach(p => p.bh = (b0 && p.b) ? sb * p.b / b0 : null);
+  const W = host.clientWidth || 600, H = host.clientHeight || 240;
+  const m = {l:58, r:12, t:10, b:26};
+  const t0 = pts[0].t, t1 = Math.max(pts[pts.length-1].t, t0 + 60000);
+  let vals = pts.map(p=>p.e).concat(pts.map(p=>p.bh).filter(v=>v!=null), [sb]);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const padv = Math.max((hi-lo)*0.15, sb*0.0015); lo -= padv; hi += padv;
+  const X = t => m.l + (t-t0)/(t1-t0) * (W-m.l-m.r);
+  const Y = v => m.t + (hi-v)/(hi-lo) * (H-m.t-m.b);
+  let g = "";
+  for (let i=0;i<=4;i++){ const v = lo + (hi-lo)*i/4, y=Y(v);
+    g += `<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="#1d2533"/><text x="${m.l-6}" y="${y+4}" fill="#8793a8" font-size="11" text-anchor="end">${money(v,(hi-lo)<40?2:0)}</text>`; }
+  const tf = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  for (let i=0;i<=3;i++){ const t=t0+(t1-t0)*i/3; const anchor = i==0?"start":(i==3?"end":"middle");
+    g += `<text x="${X(t)}" y="${H-7}" fill="#8793a8" font-size="11" text-anchor="${anchor}">${tf.format(new Date(t))}</text>`; }
+  g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(sb)}" y2="${Y(sb)}" stroke="#55627a" stroke-dasharray="2 4"/>`;
+  const path = (key) => { let s="", on=false; pts.forEach(p=>{ if(p[key]==null){on=false;return;} s += (on?"L":"M")+X(p.t).toFixed(1)+" "+Y(p[key]).toFixed(1)+" "; on=true; }); return s; };
+  const up = pts[pts.length-1].e >= sb; const col = up ? "#2ecc8f" : "#ff5c6c";
+  if (pts.some(p=>p.bh!=null)) g += `<path d="${path("bh")}" fill="none" stroke="#5aa9ff" stroke-width="1.6" stroke-dasharray="5 4" opacity=".85"/>`;
+  if (pts.length > 1) {
+    g += `<path d="${path("e")} L${X(pts[pts.length-1].t)} ${H-m.b} L${X(pts[0].t)} ${H-m.b} Z" fill="${col}" opacity=".08"/>`;
+    g += `<path d="${path("e")}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>`;
+  }
+  pts.forEach(p => { g += `<circle cx="${X(p.t)}" cy="${Y(p.e)}" r="${p.live?4.5:3}" fill="${p.live?"#0b0e14":col}" stroke="${col}" stroke-width="2"/>`; });
+  g += `<line id="xh" x1="0" x2="0" y1="${m.t}" y2="${H-m.b}" stroke="#8793a8" stroke-dasharray="3 3" style="display:none"/>`;
+  host.querySelector("svg")?.remove();
+  host.insertAdjacentHTML("afterbegin", `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Equity curve">${g}</svg>`);
+  const tip = $("tip"), xh = host.querySelector("#xh");
+  function move(ev){
+    const r = host.getBoundingClientRect(); const cx = (ev.touches?ev.touches[0].clientX:ev.clientX) - r.left;
+    let best = pts[0], bd = 1e18; pts.forEach(p=>{ const dd=Math.abs(X(p.t)-cx); if(dd<bd){bd=dd;best=p;} });
+    xh.setAttribute("x1",X(best.t)); xh.setAttribute("x2",X(best.t)); xh.style.display="";
+    tip.style.display="block"; tip.innerHTML = `<b>${money(best.e)}</b> (${pct((best.e/sb-1)*100)})<br><span class="mut">${esc(et(new Date(best.t).toISOString()))}${best.live?" · live":""}</span>` + (best.bh!=null?`<br><span style="color:#5aa9ff">BTC B&amp;H ${money(best.bh)}</span>`:"");
+    const tw = tip.offsetWidth; tip.style.left = Math.min(Math.max(X(best.t)-tw/2, 0), W-tw)+"px"; tip.style.top = (Y(best.e)-tip.offsetHeight-12 < 0 ? Y(best.e)+14 : Y(best.e)-tip.offsetHeight-12)+"px";
+  }
+  host.onmousemove = move; host.ontouchmove = move; host.ontouchstart = move;
+  host.onmouseleave = () => { tip.style.display="none"; xh.style.display="none"; };
+  $("legend").innerHTML = `<span><b style="background:${col}"></b>Account equity</span>` +
+     (pts.some(p=>p.bh!=null)?`<span><b style="background:#5aa9ff"></b>BTC buy &amp; hold ($${sb.toLocaleString()} equivalent)</span>`:"") +
+     `<span><b style="background:#55627a"></b>Starting balance</span>`;
+  $("chartnote").textContent = d.history.length + " cycle snapshot" + (d.history.length==1?"":"s") + " + live point (hollow dot)." + (d.history.length<3 ? " The curve fills in as the trader runs each cycle (state/equity_history.csv)." : "");
+}
+
+/* ---------- tables ---------- */
+function mkTable(id, key, cols, rows, emptyMsg){
+  const ss = sortState[key];
+  const col = cols.find(c=>c.k===ss.k) || cols[0];
+  const val = (r,c) => c.v ? c.v(r) : r[c.k];
+  rows = rows.slice().sort((a,b)=>{ let x=val(a,col), y=val(b,col); if(x==null) return 1; if(y==null) return -1; return (typeof x==="string"? x.localeCompare(y) : x-y) * ss.d; });
+  const el = $(id);
+  if (!rows.length){ el.innerHTML = `<tbody><tr><td class="empty" style="display:block;text-align:center;border:0">${esc(emptyMsg)}</td></tr></tbody>`; }
+  else {
+    el.innerHTML = "<thead><tr>" + cols.map(c=>`<th class="${c.left?"left":""}" data-k="${c.k}">${esc(c.h)}${ss.k===c.k?`<span class="ar">${ss.d>0?"▲":"▼"}</span>`:""}</th>`).join("") + "</tr></thead><tbody>" +
+      rows.map(r=>"<tr>"+cols.map(c=>`<td data-l="${esc(c.h)}" class="${c.left?"left":""} ${c.cls?c.cls(r)||"":""} ${c.td||""}">${c.f(r)}</td>`).join("")+"</tr>").join("") + "</tbody>";
+    el.querySelectorAll("th").forEach(th => th.onclick = () => { const k=th.dataset.k; sortState[key] = {k, d: sortState[key].k===k ? -sortState[key].d : -1}; render(DATA); });
+  }
+  const bar = document.querySelector(`.sortbar[data-t="${key}"]`);
+  if (bar){ bar.innerHTML = `Sort <select>${cols.map(c=>`<option value="${c.k}" ${ss.k===c.k?"selected":""}>${esc(c.h)}</option>`).join("")}</select><button class="btn">${ss.d>0?"▲ asc":"▼ desc"}</button>`;
+    bar.querySelector("select").onchange = e => { sortState[key].k = e.target.value; render(DATA); };
+    bar.querySelector("button").onclick = () => { sortState[key].d *= -1; render(DATA); }; }
+}
+const typeChip = r => `<span class="chip type">${esc(r.kind)}/${esc(r.setup)}</span>`;
+
+function renderPositions(d){
+  $("posCnt").textContent = d.positions.length;
+  mkTable("posTbl","pos",[
+    {k:"symbol",h:"Coin",left:1,f:r=>`<span class="sym">${esc(r.symbol)}</span>`},
+    {k:"entry_price",h:"Entry",f:r=>px(r.entry_price)},
+    {k:"last",h:"Current",f:r=>px(r.last)+(r.price_stale?' <span class="neg" title="live price unavailable">⚠</span>':"")},
+    {k:"qty",h:"Size",f:r=>qty(r.qty)+`<div class="mut" style="font-size:11px">${money(r.value)}</div>`},
+    {k:"stop",h:"Stop",f:r=>px(r.stop)+(r.trail_active?' <span class="chip type" title="trailing stop active">trail</span>':"")+`<div class="mut" style="font-size:11px">${pct(r.to_stop_pct-0,1)} away</div>`},
+    {k:"target",h:"Target",f:r=>px(r.target)+`<div class="mut" style="font-size:11px">${pct(r.to_target_pct,1)} away</div>`},
+    {k:"unreal",h:"Unreal. P&L $",f:r=>money(r.unreal,2,true),cls:r=>cls(r.unreal)},
+    {k:"unreal_pct",h:"P&L %",f:r=>pct(r.unreal_pct),cls:r=>cls(r.unreal_pct)},
+    {k:"r",h:"R-multiple",f:r=>rfmt(r.r),cls:r=>cls(r.r)},
+    {k:"entry_time",h:"Age",v:r=>-new Date(r.entry_time).getTime(),f:r=>age(r.entry_time)+`<div class="mut" style="font-size:11px">${esc(et(r.entry_time))}</div>`},
+    {k:"setup",h:"Setup",v:r=>r.kind+r.setup,f:r=>typeChip(r)+`<div class="mut" style="font-size:11px">score ${r.score}</div>`},
+  ], d.positions, "No open positions.");
+}
+
+const STATUS = {ready:"READY", blocked:"BLOCKED", below_threshold:"NEAR · BELOW SCORE"};
+function renderQueue(d){
+  const q = d.queue;
+  const items = q ? q.items : [];
+  $("qCnt").textContent = items.length;
+  const ready = items.filter(i=>i.status==="ready").length;
+  $("qMeta").textContent = q ? ("scan " + et(q.generated) + (q.source? " · "+q.source : "")) : "no scan yet";
+  mkTable("qTbl","q",[
+    {k:"symbol",h:"Coin",left:1,f:r=>`<span class="sym">${esc(r.symbol)}</span>`},
+    {k:"setup",h:"Setup",v:r=>r.kind+r.setup,f:typeChip},
+    {k:"score",h:"Score",f:r=>`${r.score}<span class="mut"> / ${r.min_score}</span>`,cls:r=>r.score>=r.min_score?"pos":"neg"},
+    {k:"status",h:"Status",left:1,f:r=>`<span class="chip ${esc(r.status)}">${STATUS[r.status]||esc(r.status)}</span>` + (r.blockers.length?`<div class="neg" style="font-size:11.5px;white-space:normal;max-width:260px;margin-top:3px">${r.blockers.map(esc).join("<br>")}</div>`:""),td:"statuscell"},
+    {k:"live_price",h:"Live",f:r=>px(r.live_price)},
+    {k:"planned_entry",h:"Planned entry",f:r=>px(r.planned_entry)},
+    {k:"stop",h:"Stop",f:r=>px(r.stop)},
+    {k:"target",h:"Target",f:r=>px(r.target)},
+    {k:"notional",h:"Size",f:r=>r.qty==null?"—":qty(r.qty)+`<div class="mut" style="font-size:11px">${money(r.notional)}${r.size_capped?" · capped":""}</div>`},
+    {k:"risk_usd",h:"Risk",f:r=>money(r.risk_usd)},
+    {k:"net_rr",h:"Net R/R",f:r=>r.net_rr==null?"—":r.net_rr.toFixed(2)},
+    {k:"reason",h:"Why",left:1,f:r=>esc(r.reason),td:"reason"},
+  ], items, q ? "No pending candidates right now — nothing qualifies or is near-qualifying." : "No queue.json yet — run a cycle or press “Run dry-run scan”.");
+  const w = q ? q.watch : [];
+  $("watch").innerHTML = w.length ? `<span class="mut" style="border:0;background:none;padding-left:0">Watchlist (uptrend, no trigger yet):</span>` + w.map(x=>`<span title="${esc(x.note)}"><b>${esc(x.symbol)}</b></span>`).join("") : "";
+  $("qNote").textContent = q ? `${ready} ready · slots ${q.open_positions}/${q.max_positions} · scanned ${q.scanned} coins. "Ready" = would be placed next cycle given current slots, cash, cooldowns, chase filter and R/R checks; sizes use the real risk model.` : "";
+}
+
+function renderTrades(d){
+  $("trCnt").textContent = d.trades.length;
+  mkTable("trTbl","tr",[
+    {k:"symbol",h:"Coin",left:1,f:r=>`<span class="sym">${esc(r.symbol)}</span>`},
+    {k:"setup",h:"Setup",v:r=>r.kind+r.setup,f:typeChip},
+    {k:"entry_time",h:"Entered",f:r=>esc(et(r.entry_time))+`<div class="mut" style="font-size:11px">@ ${px(r.entry_price)}</div>`},
+    {k:"exit_time",h:"Exited",f:r=>esc(et(r.exit_time))+`<div class="mut" style="font-size:11px">@ ${px(r.exit_price)}</div>`},
+    {k:"hold_hours",h:"Held",f:r=>hold(r.hold_hours)},
+    {k:"pnl",h:"P&L $",f:r=>money(r.pnl,2,true),cls:r=>cls(r.pnl)},
+    {k:"pnl_pct",h:"P&L %",f:r=>pct(r.pnl_pct),cls:r=>cls(r.pnl_pct)},
+    {k:"r_multiple",h:"R",f:r=>rfmt(r.r_multiple),cls:r=>cls(r.r_multiple)},
+    {k:"exit_reason",h:"Exit reason",left:1,f:r=>esc(r.exit_reason),td:"reason"},
+  ], d.trades, "No closed trades yet — the journal fills as positions hit stop, target or time exits.");
+}
+
+function render(d){
+  if (!d) return;
+  renderKpis(d); renderChart(d); renderPositions(d); renderQueue(d); renderTrades(d);
+  $("updated").textContent = "data " + et(d.generated);
+  const bad = d.price_failed && d.price_failed.length;
+  $("status").innerHTML = STATIC ? `<span class="dot warn"></span>static snapshot` : (bad ? `<span class="dot warn"></span>live (price issue: ${esc(d.price_failed.join(", "))})` : `<span class="dot"></span>live · ${esc(d.price_source||"")}`);
+}
+
+/* ---------- loading / auto-refresh ---------- */
+/* ---------- published variant: data.json poll + live Coinbase prices (graceful fallback to embedded/pushed data) ---------- */
+let BASE = PUB ? EMBED.data : null, LIVE = null;
+async function fetchLive(){
+  const syms = Array.from(new Set(BASE.positions.map(p=>p.symbol).concat(["BTC"])));
+  const one = async s => { const ac = new AbortController(), t = setTimeout(()=>ac.abort(), 6000);
+    try { const r = await fetch("https://api.exchange.coinbase.com/products/"+encodeURIComponent(s)+"-USD/ticker", {cache:"no-store", signal:ac.signal}); if(!r.ok) return null; const j = await r.json(); const v = parseFloat(j.price); return isFinite(v)&&v>0 ? v : null; }
+    catch(e){ return null; } finally { clearTimeout(t); } };
+  const res = await Promise.all(syms.map(one)); const prices = {}; let n = 0;
+  syms.forEach((s,i)=>{ if(res[i]!=null){ prices[s]=res[i]; n++; } });
+  LIVE = n ? {prices, ts: Date.now(), n, of: syms.length} : null;
+}
+function applyLive(){
+  const d = JSON.parse(JSON.stringify(BASE));
+  if (!LIVE) return d;
+  const a = d.account; let pv = 0, cost = 0;
+  d.positions.forEach(p=>{
+    const lp = LIVE.prices[p.symbol];
+    if (lp != null){ p.last = lp; p.price_stale = false; }
+    p.value = p.qty * p.last; p.unreal = p.value - p.cost; p.unreal_pct = p.unreal / p.cost * 100;
+    p.r = p.risk_amount ? p.unreal / p.risk_amount : null;
+    p.to_stop_pct = (p.last / p.stop - 1) * 100; p.to_target_pct = (p.target / p.last - 1) * 100;
+    pv += p.value; cost += p.cost;
+  });
+  a.positions_value = pv; a.equity = a.cash + pv; a.unrealized = pv - cost;
+  a.pnl = a.equity - a.start_balance; a.pnl_pct = a.pnl / a.start_balance * 100;
+  const b = LIVE.prices.BTC;
+  if (b != null && a.btc_start){ a.btc_now = b; a.btc_return_pct = (b/a.btc_start-1)*100; a.btc_equiv_equity = a.start_balance*b/a.btc_start; a.vs_btc_pts = a.pnl_pct - a.btc_return_pct; }
+  d.live_point = {ts: new Date(LIVE.ts).toISOString(), equity: a.equity, btc: a.btc_now};
+  d.price_failed = d.positions.filter(p=>LIVE.prices[p.symbol]==null).map(p=>p.symbol);
+  return d;
+}
+async function pubLoad(){
+  nextAt = Date.now() + REFRESH_MS;
+  try {
+    const r = await fetch("data.json?t="+Date.now(), {cache:"no-store"});
+    if (r.ok){ const j = await r.json(); if (j && j.account && j.generated) BASE = j; }
+  } catch(e){ /* keep last known / embedded snapshot */ }
+  try { await fetchLive(); } catch(e){ LIVE = null; }
+  DATA = applyLive(); render(DATA);
+  const f = $("asof");
+  f.innerHTML = "Data as of <b>"+esc(et(BASE.generated))+"</b> (last push from the trader: positions, stops, trades, queue)" +
+    (LIVE ? " · open-position prices live from Coinbase at <b>"+esc(new Date(LIVE.ts).toLocaleTimeString("en-US",{timeZone:"America/New_York"}))+" ET</b>" : " · live price feed unavailable — showing prices as of the last push");
+  $("status").innerHTML = LIVE ? `<span class="dot"></span>live prices · Coinbase${LIVE.n<LIVE.of?" ("+LIVE.n+"/"+LIVE.of+")":""}` : `<span class="dot warn"></span>snapshot prices (live feed unavailable)`;
+}
+
+async function load(){
+  if (PUB) { return pubLoad(); }
+  if (STATIC) { location.reload(); return; }
+  try {
+    const r = await fetch("api/data", {cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status);
+    DATA = await r.json(); render(DATA);
+  } catch(e){ $("status").innerHTML = `<span class="dot bad"></span>connection error — retrying (${esc(e.message)})`; }
+  nextAt = Date.now() + REFRESH_MS;
+}
+async function scan(){
+  const b = $("scanBtn"); b.disabled = true; b.textContent = "Scanning…";
+  try {
+    const r = await fetch("api/refresh", {method:"POST"}); const j = await r.json();
+    for (let i=0;i<90;i++){
+      await new Promise(res=>setTimeout(res,2000));
+      const s = await (await fetch("api/refresh/status",{cache:"no-store"})).json();
+      if (!s.running){ if (s.error) alert("Scan failed: "+s.error); break; }
+    }
+  } catch(e){ alert("Scan request failed: "+e.message); }
+  b.disabled = false; b.textContent = "Run dry-run scan"; load();
+}
+$("reloadBtn").onclick = load;
+if (STATIC) {
+  $("scanBtn").style.display = "none";
+  const sn = $("staticnote"); sn.style.display = "block";
+  sn.textContent = PUB ? "Published paper-trading dashboard. Positions, trades and queue update when the trader pushes (every ~15 min); open-position prices and P&L refresh live from Coinbase every 30s. Simulated only." : "Static snapshot generated " + et(DATA.generated) + " (prices as of the trader's last cycle, not live). Regenerated by every trader run; this page reloads itself every 30s.";
+  $("reloadBtn").textContent = "⟳ Reload";
+} else { $("scanBtn").onclick = scan; }
+setInterval(()=>{ const s = Math.max(0, Math.round((nextAt-Date.now())/1000)); $("countdown").textContent = "next refresh in "+s+"s"; if (Date.now()>=nextAt) { nextAt = Date.now()+REFRESH_MS; load(); } }, 1000);
+let rz; window.addEventListener("resize", ()=>{ clearTimeout(rz); rz=setTimeout(()=>DATA&&renderChart(DATA),150); });
+if (PUB) { render(applyLive()); load(); } else if (STATIC) render(DATA); else load();
+</script>
+</body>
+</html>
