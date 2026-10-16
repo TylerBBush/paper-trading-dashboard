@@ -220,7 +220,7 @@ function renderChart(d){
   $("legend").innerHTML = `<span><b style="background:${col}"></b>Account equity</span>` +
      (pts.some(p=>p.bh!=null)?`<span><b style="background:#5aa9ff"></b>BTC buy &amp; hold ($${sb.toLocaleString()} equivalent)</span>`:"") +
      `<span><b style="background:#55627a"></b>Starting balance</span>`;
-  $("chartnote").textContent = d.history.length + " cycle snapshot" + (d.history.length==1?"":"s") + " + live point (hollow dot)." + (d.history.length<3 ? " The curve fills in as the trader runs each cycle (state/equity_history.csv)." : "");
+  $("chartnote").textContent = d.history.length + " cycle snapshot" + (d.history.length==1?"":"s") + " + live point (hollow dot)." + (d.history.length<3 ? " The curve fills in as the trader runs each cycle." : "");
 }
 
 /* ---------- tables ---------- */
